@@ -372,9 +372,9 @@ bool Equihash<N,K>::BasicSolve(const eh_HashState& base_state,
 
     bool twist = ((N == 125) && (K == 4));
 
-    GenerateHash(base_state, g, tmpHash, HashOutput, twist);
+    unsigned char tmpHash[HashOutput];
     for (eh_index g = 0; X.size() < init_size; g++) {
-        GenerateHash(base_state, g, tmpHash, HashOutput);
+        GenerateHash(base_state, g, tmpHash, HashOutput, twist);
         for (eh_index i = 0; i < IndicesPerHashOutput && X.size() < init_size; i++) {
             X.emplace_back(tmpHash+(i*((N+7)/8)), ((N+7)/8), HashLength,
                            CollisionBitLength, (g*IndicesPerHashOutput)+i);

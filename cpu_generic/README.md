@@ -11,7 +11,7 @@ produces is one the pool accepts by construction.
 
 ## Vendored files
 
-`crypto/equihash.h`, `crypto/equihash.cpp` and `crypto/equihash.tcc` are copied **unmodified** from
+`crypto/equihash.h`, `crypto/equihash.cpp` and `crypto/equihash.tcc` are copied from
 
     https://github.com/upbqdn/equihashverify
     commit bdd4a788924f2c51799664a09c54c0af2ac4ea10
@@ -20,8 +20,26 @@ which is the dependency `s-nomp` builds its `equihashverify` native module from.
 `zcashd`'s `src/crypto/equihash.*` and are MIT licensed (Jack Grigg, The Zcash developers, The
 LitecoinZ developers, The s-nomp developers); see the copyright headers in each file.
 
-To keep them byte-identical to upstream, the two things they need from a `zcashd` tree are supplied
-around them instead of by editing them:
+`equihash.h` and `equihash.tcc` are byte-identical to upstream. `equihash.cpp` carries one
+two-line fix, because upstream never compiles its mining path -- `equihashverify` builds only the
+verifier, with `ENABLE_MINING` undefined, so `BasicSolve` has rotted:
+
+```
+-    GenerateHash(base_state, g, tmpHash, HashOutput, twist);
++    unsigned char tmpHash[HashOutput];
+     for (eh_index g = 0; X.size() < init_size; g++) {
+-        GenerateHash(base_state, g, tmpHash, HashOutput);
++        GenerateHash(base_state, g, tmpHash, HashOutput, twist);
+```
+
+It declared no `tmpHash`, and called `GenerateHash` once before the loop with a `g` that is not in
+scope there and once inside it without the `twist` argument the signature requires. The fix matches
+what the same file's own working `OptimisedSolve` does (`equihash.cpp:556-558`), and what upstream
+`zcashd` does (`src/crypto/equihash.cpp:352-354` at v5.10.0). `Equihash::BasicSolve` is not called
+from here -- only `EhOptimisedSolve` is -- but the translation unit has to compile.
+
+The other two things these files want from a `zcashd` tree are supplied around them rather than by
+editing them:
 
 - `../util.h`, for `zcashd`'s `LogPrint`, is provided by `util.h` here as a no-op.
 - `config/bitcoin-config.h` is already behind `#if defined(HAVE_CONFIG_H)`, which is not defined.
@@ -29,8 +47,8 @@ around them instead of by editing them:
 `crypto/common.h`, `crypto/sha256.h` and `utilstrencodings.h` come from nheqminer's own
 `nheqminer/` directory via the include path.
 
-Refreshing the vendored copy is therefore a re-download at a new commit, with no patches to
-re-apply.
+Refreshing the vendored copy is a re-download at a new commit plus that one two-line fix, unless
+upstream has repaired its mining path by then.
 
 ## Usage
 

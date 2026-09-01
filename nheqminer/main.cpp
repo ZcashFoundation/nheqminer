@@ -82,6 +82,8 @@ void print_help()
 	std::cout << "\t-a [port]\tLocal API port (default: 0 = do not bind)" << std::endl;
 	std::cout << "\t-d [level]\tDebug print level (0 = print all, 5 = fatal only, default: 2)" << std::endl;
 	std::cout << "\t-b [hashes]\tRun in benchmark mode (default: 200 iterations)" << std::endl;
+	std::cout << "\t-n [N]\t\tEquihash N (default: 200; Zcash Regtest uses 48)" << std::endl;
+	std::cout << "\t-k [K]\t\tEquihash K (default: 9; Zcash Regtest uses 5)" << std::endl;
 	std::cout << std::endl;
 	std::cout << "CPU settings" << std::endl;
 	std::cout << "\t-t [num_thrds]\tNumber of CPU threads" << std::endl;
@@ -254,6 +256,10 @@ int main(int argc, char* argv[])
 	std::string user = "34HKWdzLxWBduUfJE9JxaFhoXnfC6gmePG";
 	std::string password = "x";
 	int num_threads = 0;
+	// Equihash parameters. (200, 9) is Mainnet and Testnet; Zcash Regtest uses (48, 5), which only
+	// the generic solver can mine.
+	unsigned int eh_n = 200;
+	unsigned int eh_k = 9;
 	bool benchmark = false;
 	int log_level = 2;
 	int num_hashes = 200;
@@ -389,6 +395,12 @@ int main(int argc, char* argv[])
 		case 't':
 			num_threads = atoi(argv[++i]);
 			break;
+		case 'n':
+			eh_n = atoi(argv[++i]);
+			break;
+		case 'k':
+			eh_k = atoi(argv[++i]);
+			break;
 		case 'h':
 			print_help();
 			return 0;
@@ -448,7 +460,7 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		_MinerFactory = new MinerFactory(use_avx == 1, use_old_cuda == 0, use_old_xmp == 0);
+		_MinerFactory = new MinerFactory(use_avx == 1, use_old_cuda == 0, use_old_xmp == 0, eh_n, eh_k);
 		if (!benchmark)
 		{
 			if (user.length() == 0)

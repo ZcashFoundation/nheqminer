@@ -1,3 +1,6 @@
+#include <iostream>
+#include <utility>
+
 #include "MinerFactory.h"
 
 #include <thread>
@@ -12,9 +15,37 @@ MinerFactory::~MinerFactory()
 	ClearAllSolvers();
 }
 
+bool MinerFactory::SupportedParameters() const {
+	// Kept in step with the explicit instantiations in cpu_generic/crypto/equihash.h.
+	static const std::pair<unsigned int, unsigned int> supported[] = {
+		{200, 9}, {192, 7}, {144, 5}, {125, 4}, {96, 5}, {96, 3}, {48, 5},
+	};
+	for (const auto& params : supported) {
+		if (params.first == _n && params.second == _k) {
+			return true;
+		}
+	}
+	return false;
+}
+
 std::vector<ISolver *> MinerFactory::GenerateSolvers(int cpu_threads, int cuda_count, int* cuda_en, int* cuda_b, int* cuda_t,
 	int opencl_count, int opencl_platf, int* opencl_en, int* opencl_t) {
 	std::vector<ISolver *> solversPointers;
+
+	// Check the parameters before creating any worker. Reaching a solver with an unsupported pair
+	// throws inside a worker thread, and the CUDA and OpenCL solvers implement (200, 9) only, so
+	// they would mine parameters this miner was not asked for and every share would be rejected.
+	if (!SupportedParameters()) {
+		std::cerr << "Unsupported Equihash parameters (" << _n << ", " << _k << "). Supported: "
+		          << "(200, 9), (192, 7), (144, 5), (125, 4), (96, 5), (96, 3), (48, 5)."
+		          << std::endl;
+		exit(1);
+	}
+	if (!UsesDefaultParameters() && (cuda_count > 0 || opencl_count > 0)) {
+		std::cerr << "The CUDA and OpenCL solvers only implement Equihash (200, 9), so they cannot "
+		          << "mine (" << _n << ", " << _k << "). Use CPU threads only." << std::endl;
+		exit(1);
+	}
 
 	for (int i = 0; i < cuda_count; ++i) {
 		solversPointers.push_back(GenCUDASolver(cuda_en[i], cuda_b[i], cuda_t[i]));
@@ -56,6 +87,20 @@ void MinerFactory::ClearAllSolvers() {
 }
 
 ISolver * MinerFactory::GenCPUSolver(int use_opt) {
+	// The optimised CPU solvers only implement (200, 9), so any other parameters -- Regtest's
+	// (48, 5), say -- have to use the generic one.
+	if (!UsesDefaultParameters()) {
+#ifdef USE_CPU_GENERIC
+		_solvers.push_back(new CPUSolverGeneric(_n, _k));
+		return _solvers.back();
+#else
+		// Mining the wrong parameters silently would produce shares every pool rejects.
+		std::cerr << "This build has no generic Equihash solver, so it can only mine (200, 9). "
+		          << "Rebuild with -DUSE_CPU_GENERIC=ON to mine other parameters." << std::endl;
+		exit(1);
+#endif
+	}
+
     // TODO fix dynamic linking on Linux
 #ifdef    USE_CPU_XENONCAT
 	if (_use_xenoncat) {

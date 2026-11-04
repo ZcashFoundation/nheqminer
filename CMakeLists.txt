@@ -196,3 +196,13 @@ if (USE_CUDA_DJEZO)
     target_link_libraries(${PROJECT_NAME} cuda_djezo)
 endif()
 
+include(CTest)
+if (BUILD_TESTING)
+    set(STRATUM_TEST_SOURCES ${SOURCE_FILES})
+    list(REMOVE_ITEM STRATUM_TEST_SOURCES nheqminer/main.cpp nheqminer/MinerFactory.cpp)
+    add_executable(stratum_non_clean_jobs EXCLUDE_FROM_ALL
+        tests/stratum_non_clean_jobs.cpp ${STRATUM_TEST_SOURCES})
+    target_link_libraries(stratum_non_clean_jobs ${CMAKE_THREAD_LIBS_INIT} ${LIBS})
+    add_test(NAME stratum_non_clean_jobs COMMAND stratum_non_clean_jobs)
+    set_tests_properties(stratum_non_clean_jobs PROPERTIES TIMEOUT 20)
+endif()

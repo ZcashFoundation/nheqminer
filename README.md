@@ -53,6 +53,30 @@ Working solvers CPU_TROMP, CPU_XENONCAT, CUDA_TROMP, CUDA_DJEZO
     - `cmake ../nheqminer`
     - `make -j $(nproc)`
     
+# Stratum job updates
+
+Every new `mining.notify` job ID is handed to the miner, including same-parent
+updates with `clean_jobs=false`. Workers finish their current solver call before
+switching to the latest job. In-flight shares keep their original job ID and time;
+the pool decides whether to accept them. Clean next-parent updates use the same
+handoff as before.
+
+The routing regression uses a loopback pool, the real Stratum client and mining
+worker, and a synchronized solver supplying deterministic solution bytes. It checks
+non-clean updates, an older in-flight share after two updates, and a clean
+next-parent update. It tests job routing, not Equihash proof validity, and needs no
+CUDA, assembly objects, or live pool.
+
+From the repository root, with the build dependencies installed:
+
+```sh
+cmake -S . -B build-stratum -DBUILD_TESTING=ON \
+  -DUSE_CPU_TROMP=OFF -DUSE_CPU_XENONCAT=OFF \
+  -DUSE_CUDA_TROMP=OFF -DUSE_CUDA_DJEZO=OFF
+cmake --build build-stratum --target stratum_non_clean_jobs --parallel 2
+ctest --test-dir build-stratum -R '^stratum_non_clean_jobs$' --output-on-failure
+```
+
 # Run instructions:
 
 Parameters: 

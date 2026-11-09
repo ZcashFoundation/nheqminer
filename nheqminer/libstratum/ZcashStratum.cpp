@@ -30,7 +30,9 @@ typedef uint32_t eh_index;
 #define BOOST_LOG_CUSTOM(sev, pos) BOOST_LOG_TRIVIAL(sev) << "miner#" << pos << " | "
 
 
-void CompressArray(const unsigned char* in, size_t in_len,
+// `static`: cpu_generic links the same helpers from the vendored Equihash solver, and these
+// local copies are only used in this file. Without internal linkage the two collide at link time.
+static void CompressArray(const unsigned char* in, size_t in_len,
 	unsigned char* out, size_t out_len,
 	size_t bit_len, size_t byte_pad)
 {
@@ -70,7 +72,7 @@ void CompressArray(const unsigned char* in, size_t in_len,
 }
 
 
-void EhIndexToArray(const eh_index i, unsigned char* array)
+static void EhIndexToArray(const eh_index i, unsigned char* array)
 {
 	BOOST_STATIC_ASSERT(sizeof(eh_index) == 4);
 	eh_index bei = htobe32(i);
@@ -78,7 +80,7 @@ void EhIndexToArray(const eh_index i, unsigned char* array)
 }
 
 
-std::vector<unsigned char> GetMinimalFromIndices(std::vector<eh_index> indices,
+static std::vector<unsigned char> GetMinimalFromIndices(std::vector<eh_index> indices,
 	size_t cBitLen)
 {
 	assert(((cBitLen + 1) + 7) / 8 <= sizeof(eh_index));
@@ -204,9 +206,11 @@ void static ZcashMinerThread(ZcashMiner* miner, int size, int pos, ISolver *solv
 					actualHeader.nNonce = bNonce;
 					if (compressed_sol)
 					{
-						actualHeader.nSolution = std::vector<unsigned char>(1344);
-						for (size_t i = 0; i < cbitlen; ++i)
-							actualHeader.nSolution[i] = compressed_sol[i];
+						// `cbitlen` is the compressed solution's length in bytes, which depends on
+						// the chain's Equihash parameters: 1344 for (200, 9), 36 for Regtest's
+						// (48, 5). Sizing the vector from it keeps both correct.
+						actualHeader.nSolution =
+							std::vector<unsigned char>(compressed_sol, compressed_sol + cbitlen);
 					}
 					else
 						actualHeader.nSolution = GetMinimalFromIndices(index_vector, cbitlen);
@@ -591,9 +595,8 @@ bool benchmark_solve_equihash(const CBlock& pblock, const char *tequihash_header
 
 		if (compressed_sol)
 		{
-			hdr.nSolution = std::vector<unsigned char>(1344);
-			for (size_t i = 0; i < cbitlen; ++i)
-				hdr.nSolution[i] = compressed_sol[i];
+			// See the note in ZcashMiner::solve(): the solution's length comes from the solver.
+			hdr.nSolution = std::vector<unsigned char>(compressed_sol, compressed_sol + cbitlen);
 		}
 		else
 			hdr.nSolution = GetMinimalFromIndices(index_vector, cbitlen);

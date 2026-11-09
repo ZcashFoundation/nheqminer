@@ -14,6 +14,11 @@ CREATE_SOLVER_STUB(cpu_tromp, "cpu_tromp_STUB")
 #else
 CREATE_SOLVER_STUB(cpu_xenoncat, "cpu_xenoncat_STUB")
 #endif
+#ifdef USE_CPU_GENERIC
+#include "../cpu_generic/cpu_generic.hpp"
+#else
+CREATE_SOLVER_STUB(cpu_generic, "cpu_generic_STUB")
+#endif
 #ifdef USE_CUDA_TROMP
 #include "../cuda_tromp/cuda_tromp.hpp"
 #else
@@ -41,6 +46,19 @@ CREATE_SOLVER_STUB(ocl_silentarmy, "ocl_silentarmy_STUB")
 //} // AvailableSolvers
 
 // CPU solvers
+#ifdef USE_CPU_GENERIC
+// Mines any Equihash parameters the generic solver supports, for chains that are not (200, 9).
+// Only defined when that solver is compiled in: the stub has no parameters to set.
+class CPUSolverGeneric : public Solver<cpu_generic> {
+public:
+	CPUSolverGeneric(unsigned int n, unsigned int k) : Solver<cpu_generic>(new cpu_generic(), SolverType::CPU) {
+		_context->n = n;
+		_context->k = k;
+	}
+	virtual ~CPUSolverGeneric() {}
+};
+#endif
+
 class CPUSolverTromp : public Solver<cpu_tromp> {
 public:
 	CPUSolverTromp(int use_opt) : Solver<cpu_tromp>(new cpu_tromp(), SolverType::CPU) {

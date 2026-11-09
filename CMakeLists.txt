@@ -1,6 +1,9 @@
 project(nheqminer)
 cmake_minimum_required(VERSION 3.5)
 
+# So `ctest` in the build directory runs the solver tests.
+enable_testing()
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11") #  -Wall
 
 ## Enable solvers here
@@ -9,6 +12,8 @@ option(USE_CPU_TROMP "USE CPU_TROMP" OFF)
 option(USE_CUDA_TROMP "USE CUDA_TROMP" OFF)
 #### faster
 option(USE_CPU_XENONCAT "USE CPU_XENONCAT" ON)
+#### any Equihash parameters, e.g. Regtest (48, 5); slower, off the (200, 9) fast path
+option(USE_CPU_GENERIC "USE CPU_GENERIC" ON)
 option(USE_CUDA_DJEZO "USE CUDA_DJEZO" ON)
 
 ## Add solvers here
@@ -19,6 +24,10 @@ endif()
 if (USE_CPU_XENONCAT)
     add_definitions(-DUSE_CPU_XENONCAT)
     message("-- USE_CPU_XENONCAT DEFINED")
+endif()
+if (USE_CPU_GENERIC)
+    add_definitions(-DUSE_CPU_GENERIC)
+    message("-- USE_CPU_GENERIC DEFINED")
 endif()
 if (USE_CUDA_TROMP)
     add_definitions(-DUSE_CUDA_TROMP)
@@ -164,6 +173,9 @@ endif()
 if (USE_CPU_XENONCAT)
     add_subdirectory(cpu_xenoncat)
 endif()
+if (USE_CPU_GENERIC)
+    add_subdirectory(cpu_generic)
+endif()
 if (USE_CUDA_TROMP)
     add_subdirectory(cuda_tromp)
 endif()
@@ -188,6 +200,9 @@ if (USE_CPU_XENONCAT)
     add_library ( xenoncat_avx2 SHARED IMPORTED GLOBAL )
     set_target_properties ( xenoncat_avx2 PROPERTIES IMPORTED_LOCATION "../nheqminer/cpu_xenoncat/asm_linux/equihash_avx2.o" )
     target_link_libraries(${PROJECT_NAME} cpu_xenoncat xenoncat_avx1 xenoncat_avx2)
+endif()
+if (USE_CPU_GENERIC)
+    target_link_libraries(${PROJECT_NAME} cpu_generic sodium)
 endif()
 if (USE_CUDA_TROMP)
     target_link_libraries(${PROJECT_NAME} cuda_tromp)

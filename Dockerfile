@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     libboost-system-dev \
+    libsodium-dev \
     libboost-log-dev \
     libboost-date-time-dev \
     libboost-filesystem-dev \
@@ -29,6 +30,7 @@ WORKDIR /src/build
 RUN cmake ../nheqminer \
     -DUSE_CPU_XENONCAT=ON \
     -DUSE_CPU_TROMP=OFF \
+    -DUSE_CPU_GENERIC=ON \
     -DUSE_CUDA_DJEZO=OFF \
     -DUSE_CUDA_TROMP=OFF \
     && make -j$(nproc)
@@ -38,6 +40,7 @@ FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libboost-system1.74.0 \
+    libsodium23 \
     libboost-log1.74.0 \
     libboost-date-time1.74.0 \
     libboost-filesystem1.74.0 \

@@ -260,12 +260,6 @@ void StratumClient<Miner, Job, Solution>::processReponse(const Object& responseO
 
 				if (workOrder)
 				{
-					if (!workOrder->clean)
-					{
-						BOOST_LOG_CUSTOM(info) << CL_CYN "Ignoring non-clean job #" << workOrder->jobId() << CL_N;;
-						break;
-					}
-
 					BOOST_LOG_CUSTOM(info) << CL_CYN "Received new job #" << workOrder->jobId() << CL_N;
 					workOrder->setTarget(m_nextJobTarget);
 
